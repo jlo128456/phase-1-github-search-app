@@ -1,28 +1,48 @@
 document.addEventListener('DOMContentLoaded', function() {
-    const form = document.getElementById("github-form");
+    let searchType = 'users';  // Default search type
+    const form = document.getElementById('github-form');
+    const toggleButton = document.getElementById('toggle-search');
+
     form.addEventListener('submit', function(event) {
         event.preventDefault();
-        const userQuery = document.getElementById('search').value;
-        searchGitHubUsers(userQuery);
+        const query = document.getElementById('search').value;
+        if (searchType === 'users') {
+            searchGitHubUsers(query);
+        } else {
+            searchGitHubRepos(query);
+        }
+    });
+
+    toggleButton.addEventListener('click', function() {
+        searchType = (searchType === 'users') ? 'repos' : 'users';
+        toggleButton.textContent = `Toggle Search: ${searchType === 'users' ? 'Repositories' : 'Users'}`;
+        document.getElementById('search').placeholder = `Search GitHub ${searchType}...`;
     });
 });
 
 function searchGitHubUsers(query) {
-    fetch(`https://api.github.com/search/users?q=${query}`, {
+    const url = `https://api.github.com/search/users?q=${query}`;
+    fetchGitHubData(url);
+}
+
+function searchGitHubRepos(query) {
+    const url = `https://api.github.com/search/repositories?q=${query}`;
+    fetchGitHubData(url);
+}
+
+function fetchGitHubData(url) {
+    fetch(url, {
         headers: { 'Accept': 'application/vnd.github.v3+json' }
     })
-    .then(response => {
-        if (!response.ok) {
-            throw new Error('Network response was not ok');
-        }
-        return response.json();
-    })
+    .then(response => response.json())
     .then(data => {
-        displayUsers(data.items);
+        if (url.includes('users')) {
+            displayUsers(data.items);
+        } else {
+            displayRepos(data.items);
+        }
     })
-    .catch(error => {
-        console.error('Error fetching data:', error);
-    });
+    .catch(error => console.error('Error fetching data:', error));
 }
 
 function displayUsers(users) {
@@ -30,10 +50,8 @@ function displayUsers(users) {
     userList.innerHTML = '';
     users.forEach(user => {
         const userItem = document.createElement('li');
-        userItem.innerHTML = `
-            <img src="${user.avatar_url}" alt="${user.login}'s avatar" width="50" height="50">
-            <a href="#" onclick="fetchUserRepos('${user.login}')">${user.login}</a>
-        `;
+        userItem.innerHTML = `<img src="${user.avatar_url}" width="50" height="50">
+                              <a href="#" onclick="fetchUserRepos('${user.login}')">${user.login}</a>`;
         userList.appendChild(userItem);
     });
 }
